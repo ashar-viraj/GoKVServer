@@ -29,13 +29,12 @@ func connectToServer() *sql.DB {
 		log.Println(".env file not found, using system environment variables")
 	}
 
-	host := os.Getenv("DB_HOST")
 	port := os.Getenv("DB_PORT")
 	user := os.Getenv("DB_USER")
 	password := os.Getenv("DB_PASSWORD")
 	dbname := os.Getenv("DB_NAME")
 
-	if host == "" || port == "" || user == "" || password == "" || dbname == "" {
+	if port == "" || user == "" || password == "" || dbname == "" {
 		log.Fatal("Missing one or more required environment variables (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME)")
 	}
 
