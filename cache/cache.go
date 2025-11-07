@@ -2,6 +2,8 @@ package cache
 
 import (
 	"container/list"
+	"os"
+	"strconv"
 	"sync"
 )
 
@@ -48,6 +50,7 @@ func (c *LRUCache) Put(key int, value string) {
 	}
 
 	// If full, evict LRU
+	MAX_CACHE_SIZE, _ := strconv.Atoi(os.Getenv("MAX_CACHE_SIZE"))
 	if c.eviction.Len() >= MAX_CACHE_SIZE {
 		oldest := c.eviction.Back()
 		if oldest != nil {
