@@ -12,9 +12,8 @@ func main() {
 	database := db.Connect()
 	defer database.Close()
 
-	http.HandleFunc("/create", handlers.Create)
-	http.HandleFunc("/read", handlers.Read)
-	http.HandleFunc("/update", handlers.Update)
+	http.HandleFunc("/put", handlers.Put)
+	http.HandleFunc("/get", handlers.Get)
 	http.HandleFunc("/delete", handlers.Delete)
 
 	fmt.Println("Server running on http://localhost:8080")
