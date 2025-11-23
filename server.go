@@ -6,9 +6,21 @@ import (
 	"myserver/db"
 	"myserver/handlers"
 	"net/http"
+	"os"
+	"runtime"
+
+	_ "net/http/pprof"
 )
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
+	fmt.Println("PID:", os.Getpid())
+
 	database := db.Connect()
 	defer database.Close()
 

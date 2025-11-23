@@ -4,9 +4,10 @@ import (
 	"container/list"
 	"os"
 	"strconv"
+	"sync"
 )
 
-const MAX_CACHE_SIZE = 5
+var MAX_CACHE_SIZE, _ = strconv.Atoi(os.Getenv("MAX_CACHE_SIZE"))
 
 type entry struct {
 	key   int
@@ -14,6 +15,7 @@ type entry struct {
 }
 
 type LRUCache struct {
+	mu       sync.RWMutex
 	cache    map[int]*list.Element
 	eviction *list.List
 }
@@ -26,6 +28,9 @@ func NewCache() *LRUCache {
 }
 
 func (c *LRUCache) Get(key int) (string, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if elem, found := c.cache[key]; found {
 		c.eviction.MoveToFront(elem)
 		return elem.Value.(*entry).value, true
@@ -34,6 +39,9 @@ func (c *LRUCache) Get(key int) (string, bool) {
 }
 
 func (c *LRUCache) Put(key int, value string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if elem, found := c.cache[key]; found {
 		elem.Value.(*entry).value = value
 		c.eviction.MoveToFront(elem)
@@ -54,6 +62,9 @@ func (c *LRUCache) Put(key int, value string) {
 }
 
 func (c *LRUCache) Delete(key int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if elem, found := c.cache[key]; found {
 		c.eviction.Remove(elem)
 		delete(c.cache, key)

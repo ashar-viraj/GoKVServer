@@ -31,13 +31,19 @@ func Put(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := db.DB.Exec("INSERT INTO kvstore (key, value) VALUES ($1, $2)", req.Key, req.Value)
+	res, err := db.DB.Exec("INSERT INTO kvstore (key, value) VALUES ($1, $2) ON CONFLICT DO NOTHING", req.Key, req.Value)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Insert failed: %v", err), http.StatusConflict)
 		return
 	}
 
-	Cache.Put(req.Key, req.Value)
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Key-value already exists"})
+		return
+	}
+
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "Created key %d", req.Key)
 }
@@ -49,9 +55,14 @@ func Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	keyStr := r.URL.Query().Get("key")
+	if keyStr == "" {
+		http.Error(w, "Invalid key", http.StatusBadRequest)
+		return
+	}
+
 	key, err := strconv.Atoi(keyStr)
 	if err != nil {
-		http.Error(w, "Invalid key", http.StatusBadRequest)
+		http.Error(w, "Key must be an integer", http.StatusBadRequest)
 		return
 	}
 
@@ -62,9 +73,10 @@ func Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var value string
-	err = db.DB.QueryRow("SELECT value FROM kvstore WHERE key = $1", key).Scan(&value)
-	if err != nil {
-		http.Error(w, "Key not found", http.StatusNotFound)
+	dbErr := db.DB.QueryRow("SELECT value FROM kvstore WHERE key = $1", key).Scan(&value)
+	if dbErr != nil {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Key not found"})
 		return
 	}
 

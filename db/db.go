@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -78,7 +80,7 @@ func connectToAppDB() *sql.DB {
 	password := os.Getenv("DB_PASSWORD")
 	dbname := os.Getenv("DB_NAME")
 
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s application_name=GoServer sslmode=disable",
 		host, port, user, password, dbname)
 
 	db, err := sql.Open("postgres", psqlInfo)
@@ -91,13 +93,14 @@ func connectToAppDB() *sql.DB {
 	}
 
 	fmt.Printf("Connected to '%s' successfully.\n", dbname)
+	configurePool(db)
 	return db
 }
 
 func createTableIfNotExists(db *sql.DB) {
 	query := `
 	CREATE TABLE IF NOT EXISTS kvstore (
-		key INTEGER PRIMARY KEY,
+		key INT PRIMARY KEY,
 		value TEXT NOT NULL
 	)`
 
@@ -107,4 +110,23 @@ func createTableIfNotExists(db *sql.DB) {
 	}
 
 	fmt.Println("Table 'kvstore' ready.")
+}
+
+func configurePool(db *sql.DB) {
+	maxOpen := intFromEnv("DB_MAX_OPEN_CONNS", 50)
+	maxIdle := intFromEnv("DB_MAX_IDLE_CONNS", 25)
+	lifetimeMinutes := intFromEnv("DB_CONN_MAX_LIFETIME_MIN", 5)
+
+	db.SetMaxOpenConns(maxOpen)
+	db.SetMaxIdleConns(maxIdle)
+	db.SetConnMaxLifetime(time.Duration(lifetimeMinutes) * time.Minute)
+}
+
+func intFromEnv(key string, fallback int) int {
+	if val := os.Getenv(key); val != "" {
+		if parsed, err := strconv.Atoi(val); err == nil {
+			return parsed
+		}
+	}
+	return fallback
 }
